@@ -1,0 +1,13 @@
+vnstock
+squarify
+pandas
+numpy
+matplotlib
+seaborn
+plotly
+jupyter
+ta
+scikit-learn
+xgboost
+shap
+streamlit

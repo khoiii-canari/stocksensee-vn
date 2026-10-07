@@ -4,53 +4,118 @@
 
 ---
 
-## Giới thiệu
+## Overview
 
-StockSense giúp nhà đầu tư cá nhân phân tích cổ phiếu Việt Nam bằng Machine Learning.
-Điểm đặc biệt: Model không chỉ dự đoán mà còn **giải thích tại sao** (Explainable AI với SHAP).
+**StockSense** is an end-to-end Machine Learning system that analyzes and predicts stock price trends on the Vietnamese stock market (HOSE/HNX).
 
-## Cấu trúc project
+Users enter a stock ticker (e.g. `VCB`, `FPT`, `VNM`) and the system:
+1. Displays historical price charts with technical indicators
+2. Predicts the 5-day price trend (upward or downward)
+3. **Explains why** the model made that prediction (Explainable AI via SHAP)
+
+---
+
+## Project Structure
 
 ```
 stocksense/
+├── config.py            ← Central configurations (features, tickers, hyperparams)
 ├── data/
-│   ├── fetcher.py       ← Lấy data từ vnstock API
-│   ├── features.py      ← Tính technical indicators
-│   ├── raw/             ← CSV data gốc
-│   └── processed/       ← Data đã clean + features
-├── models/              ← Train & đánh giá model (Tuần 3-4)
-├── app/                 ← Streamlit dashboard (Tuần 5-6)
-├── notebooks/           ← EDA & experiments
-├── docs/                ← Tài liệu cho bạn Kinh tế
+│   ├── fetcher.py       ← Pull OHLCV data from vnstock API / load cached CSV
+│   ├── features.py      ← Compute 20+ technical indicators & clean features
+│   ├── raw/             ← Raw CSV files (one per ticker: VCB, FPT, VNM, HPG, VIC)
+│   └── processed/       ← Cleaned data + features, ready for modeling
+├── models/
+│   ├── train.py         ← Train XGBoost model with TimeSeriesSplit & save artifacts
+│   ├── evaluate.py      ← Metrics (Accuracy, Precision, Recall, F1) & confusion matrix
+│   ├── explain.py       ← SHAP Explainability (Waterfall, beeswarm, feature impact)
+│   ├── predict.py       ← Production inference pipeline for current stock signals
+│   └── saved/           ← Serialized model (.pkl), feature list, and evaluation metrics (.json)
+├── app/
+│   └── main.py          ← Multi-page interactive Streamlit dashboard
+├── notebooks/           ← EDA scripts and interactive Plotly HTML reports
+├── docs/                ← Project documentation & Data Dictionary
 ├── requirements.txt
 └── README.md
 ```
 
-## Cài đặt
+---
+
+## Quick Start
 
 ```bash
-# 1. Tạo và kích hoạt virtual environment
+# 1. Clone and navigate
+git clone <repo-url>
+cd stocksense
+
+# 2. Create and activate virtual environment
 python -m venv venv
 venv\Scripts\activate      # Windows
+source venv/bin/activate   # Mac/Linux
 
-# 2. Cài dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
 
-# 3. Lấy data lần đầu
-python -m data.fetcher
+# 4. Fetch stock data (first time only or use cached in data/raw)
+python data/fetcher.py
+
+# 5. Run Exploratory Data Analysis (EDA)
+python notebooks/01_EDA.py
+
+# 6. Train XGBoost Model with TimeSeries Validation
+python models/train.py
+
+# 7. Evaluate model & check metrics
+python models/evaluate.py
+
+# 8. Run inference on latest market data
+python models/predict.py
+
+# 9. Launch Streamlit Web Dashboard
+streamlit run app/main.py
 ```
 
-## Team
+---
 
-| Vai trò | Background | Phụ trách |
-|---------|-----------|-----------|
-| IT Engineer | Công nghệ thông tin | Data pipeline, ML model, Dashboard |
-| Finance Analyst | Kinh tế | Feature design, Model validation, Business logic |
+## Data
+
+| Property | Details |
+|----------|---------|
+| Source | vnstock API (free, real data from HOSE/HNX) |
+| Tickers | VCB, FPT, VNM, HPG, VIC (expandable) |
+| Period | 2020 – 2024 (~1,307 trading days per ticker) |
+| Raw features | 7 columns: time, open, high, low, close, volume, symbol |
+| Engineered features | 26 columns after technical indicator computation |
+
+---
 
 ## Tech Stack
 
-- **Data**: `vnstock3`, `pandas`, `numpy`
-- **Features**: `ta` (Technical Analysis)
-- **Model**: `scikit-learn`, `xgboost`, `shap`
-- **Dashboard**: `streamlit`, `plotly`
-- **Deploy**: Streamlit Cloud
+| Layer | Tools |
+|-------|-------|
+| Data | `vnstock`, `pandas`, `numpy` |
+| Features | `ta` (Technical Analysis library) |
+| Model | `scikit-learn`, `XGBoost`, `SHAP` |
+| Visualization | `plotly`, `matplotlib` |
+| Dashboard | `Streamlit` |
+| Deployment | Streamlit Cloud |
+
+---
+
+## Team
+
+| Role | Background | Responsibilities |
+|------|-----------|-----------------|
+| IT Engineer | Computer Science | Data pipeline, ML modeling, dashboard, deployment |
+| Finance Analyst | Economics | Feature design, model validation, business logic, UX feedback |
+
+---
+
+## Roadmap
+ 
+| Week | Goal | Status |
+|------|------|--------|
+| 1–2 | Data collection, feature engineering, EDA | ✅ Hoàn thành |
+| 3–4 | XGBoost model training, TimeSeries CV, SHAP explainability | ✅ Hoàn thành |
+| 5–6 | Streamlit dashboard (Technical charts, AI prediction, SHAP breakdown) | ✅ Hoàn thành |
+| 7–8 | Deployment & Cloud Hosting | 🚀 Sẵn sàng deploy |

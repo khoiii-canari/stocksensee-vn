@@ -11,15 +11,21 @@ Cach dung:
 """
 
 import os
-os.environ['VNSTOCK_TELEMETRY'] = 'off'   # tat quang cao / telemetry
-
+import logging
+from pathlib import Path
 import pandas as pd
 
-# Danh sach ma co phieu mac dinh de phan tich
-DEFAULT_SYMBOLS = ['VCB', 'FPT', 'VNM', 'HPG', 'VIC']
-DEFAULT_START   = '2020-01-01'
-DEFAULT_END     = '2024-12-31'
-RAW_DATA_DIR    = os.path.join(os.path.dirname(__file__), '..', 'data', 'raw')
+# Try to import vnstock, catch error if not installed
+try:
+    from vnstock.api.quote import Quote
+except ImportError:
+    Quote = None
+
+from config import DEFAULT_SYMBOLS, DEFAULT_START, DEFAULT_END, RAW_DATA_DIR
+
+os.environ['VNSTOCK_TELEMETRY'] = 'off'   # tat quang cao / telemetry
+
+logger = logging.getLogger(__name__)
 
 
 def fetch_stock_data(symbol: str, start: str = DEFAULT_START, end: str = DEFAULT_END) -> pd.DataFrame:
@@ -34,12 +40,14 @@ def fetch_stock_data(symbol: str, start: str = DEFAULT_START, end: str = DEFAULT
     Returns:
         DataFrame voi cot: time, open, high, low, close, volume
     """
-    from vnstock.api.quote import Quote
-    print(f"[FETCH] {symbol} | {start} -> {end}")
+    if Quote is None:
+        raise ImportError("Please install vnstock to fetch data via API.")
+        
+    logger.info(f"[FETCH] {symbol} | {start} -> {end}")
     q = Quote(symbol=symbol, source='VCI')
     df = q.history(start=start, end=end, interval='1D')
     df['symbol'] = symbol
-    print(f"   [OK] {symbol}: {len(df)} ngay giao dich")
+    logger.info(f"   [OK] {symbol}: {len(df)} ngay giao dich")
     return df
 
 
@@ -55,7 +63,7 @@ def fetch_multiple_stocks(
     Returns:
         dict { 'VCB': DataFrame, 'FPT': DataFrame, ... }
     """
-    os.makedirs(RAW_DATA_DIR, exist_ok=True)
+    RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)
     result = {}
 
     for symbol in symbols:
@@ -64,14 +72,14 @@ def fetch_multiple_stocks(
             result[symbol] = df
 
             if save_csv:
-                path = os.path.join(RAW_DATA_DIR, f'{symbol}.csv')
+                path = RAW_DATA_DIR / f'{symbol}.csv'
                 df.to_csv(path, index=False)
-                print(f"   [SAVED] {path}")
+                logger.info(f"   [SAVED] {path}")
 
         except Exception as e:
-            print(f"   [ERROR] {symbol}: {e}")
+            logger.error(f"   [ERROR] {symbol}: {e}")
 
-    print(f"\n[DONE] Tai duoc {len(result)}/{len(symbols)} ma.")
+    logger.info(f"\n[DONE] Tai duoc {len(result)}/{len(symbols)} ma.")
     return result
 
 
@@ -80,15 +88,16 @@ def load_stock_from_csv(symbol: str) -> pd.DataFrame:
     Load data da luu tu CSV thay vi goi API lai.
     Dung sau khi da fetch_multiple_stocks() mot lan roi.
     """
-    path = os.path.join(RAW_DATA_DIR, f'{symbol}.csv')
-    if not os.path.exists(path):
+    path = RAW_DATA_DIR / f'{symbol}.csv'
+    if not path.exists():
         raise FileNotFoundError(f"Chua co data cho {symbol}. Chay fetch_stock_data() truoc.")
     df = pd.read_csv(path, parse_dates=['time'])
     return df
 
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.INFO)
     data = fetch_multiple_stocks()
     if 'VCB' in data:
-        print("\n[PREVIEW] VCB (3 dong cuoi):")
-        print(data['VCB'].tail(3).to_string())
+        logger.info("\n[PREVIEW] VCB (3 dong cuoi):")
+        logger.info("\n" + data['VCB'].tail(3).to_string())

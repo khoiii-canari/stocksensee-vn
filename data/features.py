@@ -1,60 +1,39 @@
-"""
-data/features.py
-----------------
-Tính toán Technical Indicators từ dữ liệu OHLCV.
-
-Mỗi indicator có comment giải thích ý nghĩa tài chính.
-Bạn Kinh tế có thể đề xuất thêm/bỏ indicator ở đây.
-
-Cách dùng:
-    from data.features import add_technical_indicators
-
-    df_raw = load_stock_from_csv('VCB')
-    df     = add_technical_indicators(df_raw)
-"""
-
+import logging
 import pandas as pd
 import ta
 
+logger = logging.getLogger(__name__)
+
+FEATURE_COLUMNS = [
+    'rsi', 'rsi_oversold', 'rsi_overbought',
+    'macd', 'macd_signal', 'macd_diff',
+    'ma20', 'ma50', 'price_above_ma20', 'price_above_ma50', 'golden_cross',
+    'bb_upper', 'bb_lower', 'bb_pct', 'bb_width',
+    'volume_ma20', 'volume_ratio', 'high_volume',
+    'daily_return', 'return_volatility_5d', 'return_volatility_20d',
+    'price_change_5d', 'price_change_20d',
+]
 
 def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Thêm các technical indicators vào DataFrame.
-
-    Input : DataFrame với cột close, high, low, volume
-    Output: DataFrame gốc + ~15 cột mới
-    """
+    logger.info("Adding technical indicators.")
     df = df.copy()
     close  = df['close']
     high   = df['high']
     low    = df['low']
     volume = df['volume']
 
-    # ── MOMENTUM ──────────────────────────────────────────────────────────────
-    # RSI (Relative Strength Index)
-    # Ý nghĩa: Đo tốc độ và độ lớn của thay đổi giá.
-    # RSI < 30 → "oversold" (bị bán quá mức, có thể bật lên)
-    # RSI > 70 → "overbought" (bị mua quá mức, có thể điều chỉnh xuống)
+    # RSI
     df['rsi'] = ta.momentum.RSIIndicator(close, window=14).rsi()
-    df['rsi_oversold']  = (df['rsi'] < 30).astype(int)  # 1 nếu oversold
-    df['rsi_overbought'] = (df['rsi'] > 70).astype(int) # 1 nếu overbought
+    df['rsi_oversold']  = (df['rsi'] < 30).astype(int)
+    df['rsi_overbought'] = (df['rsi'] > 70).astype(int)
 
-    # ── TREND ─────────────────────────────────────────────────────────────────
-    # MACD (Moving Average Convergence Divergence)
-    # Ý nghĩa: Đo momentum của xu hướng.
-    # macd_diff > 0 → bullish (đà tăng)
-    # macd_diff < 0 → bearish (đà giảm)
-    # Giao cắt 0 → tín hiệu đảo chiều
+    # MACD
     macd = ta.trend.MACD(close)
     df['macd']        = macd.macd()
     df['macd_signal'] = macd.macd_signal()
-    df['macd_diff']   = macd.macd_diff()  # histogram
+    df['macd_diff']   = macd.macd_diff()
 
-    # Moving Averages (Đường trung bình động)
-    # Ý nghĩa: Làm mượt nhiễu ngắn hạn, xác định xu hướng dài hạn.
-    # Giá > MA20 → ngắn hạn tích cực
-    # Giá > MA50 → trung hạn tích cực
-    # MA20 cắt MA50 từ dưới lên → "golden cross" (tín hiệu mua mạnh)
+    # Moving Averages
     df['ma20'] = close.rolling(window=20).mean()
     df['ma50'] = close.rolling(window=50).mean()
     df['price_above_ma20'] = (close > df['ma20']).astype(int)
@@ -62,42 +41,38 @@ def add_technical_indicators(df: pd.DataFrame) -> pd.DataFrame:
     df['golden_cross']     = ((df['ma20'] > df['ma50']) &
                               (df['ma20'].shift(1) <= df['ma50'].shift(1))).astype(int)
 
-    # ── VOLATILITY ────────────────────────────────────────────────────────────
     # Bollinger Bands
-    # Ý nghĩa: Đo độ biến động. Giá chạm lower band thường = cơ hội mua.
-    # bb_pct = 0 → giá ở lower band (có thể oversold)
-    # bb_pct = 1 → giá ở upper band (có thể overbought)
     bb = ta.volatility.BollingerBands(close, window=20)
     df['bb_upper'] = bb.bollinger_hband()
     df['bb_lower'] = bb.bollinger_lband()
-    df['bb_pct']   = bb.bollinger_pband()  # vị trí trong dải (0→1)
-    df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['ma20']  # độ rộng dải
+    df['bb_pct']   = bb.bollinger_pband()
+    df['bb_width'] = (df['bb_upper'] - df['bb_lower']) / df['ma20']
 
-    # ── VOLUME ────────────────────────────────────────────────────────────────
-    # Ý nghĩa: Volume tăng đột biến + giá tăng = tín hiệu mạnh (có tiền lớn vào)
-    # Volume tăng đột biến + giá giảm = cảnh báo (bán tháo)
+    # Volume
     df['volume_ma20']  = volume.rolling(window=20).mean()
-    df['volume_ratio'] = volume / df['volume_ma20']  # > 2 là đột biến
+    df['volume_ratio'] = volume / df['volume_ma20']
     df['high_volume']  = (df['volume_ratio'] > 2).astype(int)
 
-    # ── TARGET VARIABLE ───────────────────────────────────────────────────────
-    # Đây là thứ model sẽ cố dự đoán:
-    # 1 = giá 5 ngày sau CAO HƠN hôm nay (nên mua)
-    # 0 = giá 5 ngày sau THẤP HƠN hôm nay (không nên mua)
-    df['target'] = (close.shift(-5) > close).astype(int)
+    # Additional Features
+    df['daily_return'] = close.pct_change()
+    df['return_volatility_5d'] = df['daily_return'].rolling(window=5).std()
+    df['return_volatility_20d'] = df['daily_return'].rolling(window=20).std()
+    df['price_change_5d'] = close.pct_change(periods=5)
+    df['price_change_20d'] = close.pct_change(periods=20)
 
-    # Bỏ các hàng bị NaN do rolling windows
+    # Only drop rows that have NaN because of the rolling windows at the beginning.
     df = df.dropna()
-    print(f"✅ Feature engineering xong: {df.shape[0]} rows × {df.shape[1]} columns")
     return df
 
-
-if __name__ == '__main__':
-    # Test thử
-    import sys, os
-    sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-    from data.fetcher import load_stock_from_csv
-
-    df_raw = load_stock_from_csv('VCB')
-    df     = add_technical_indicators(df_raw)
-    print(df[['close', 'rsi', 'macd_diff', 'bb_pct', 'volume_ratio', 'target']].tail(5))
+def add_target(df: pd.DataFrame, horizon: int = 5) -> pd.DataFrame:
+    logger.info(f"Adding target with horizon={horizon}.")
+    df = df.copy()
+    
+    # Target: 1 if close price increases after `horizon` days, else 0
+    future_close = df['close'].shift(-horizon)
+    mask = future_close.notna()
+    
+    df = df[mask].copy()
+    df['target'] = (future_close[mask] > df['close'][mask]).astype(int)
+    
+    return df

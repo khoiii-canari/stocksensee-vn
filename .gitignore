@@ -1,0 +1,25 @@
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Data cache (optional, keep raw data if needed)
+data/processed/*.csv
+
+# Notebook checkpoints & large html exports
+.ipynb_checkpoints/
+notebooks/charts/*.html
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

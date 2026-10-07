@@ -1,188 +1,189 @@
-# StockSense — Tổng Quan Dự Án
+# StockSense — Project Overview
 
-> **Dành cho:** Bất kỳ ai muốn hiểu dự án này — bạn đồng đội, recruiter, giảng viên, hay chính bạn sau 3 tháng quên hết.
-
----
-
-## 1. Dự án này là gì?
-
-**StockSense** là một hệ thống phân tích và dự đoán xu hướng cổ phiếu trên thị trường chứng khoán Việt Nam (HOSE/HNX), được xây dựng bằng Machine Learning.
-
-Người dùng nhập vào một mã cổ phiếu (ví dụ: `VCB`, `FPT`, `VNM`) và hệ thống sẽ:
-
-1. Hiển thị biểu đồ giá lịch sử kèm các chỉ số kỹ thuật
-2. Dự đoán xu hướng giá trong 5 ngày tới (tăng hay giảm)
-3. **Giải thích tại sao** model đưa ra dự đoán đó (yếu tố nào ảnh hưởng nhiều nhất)
+> **Audience:** Anyone who wants to understand this project — teammates, recruiters, advisors, or your future self.
 
 ---
 
-## 2. Tại sao cần dự án này?
+## 1. What is this project?
 
-### Vấn đề thực tế
+**StockSense** is a Machine Learning system for analyzing and predicting stock price trends on the Vietnamese stock market (HOSE/HNX).
 
-Có khoảng **8 triệu tài khoản chứng khoán** tại Việt Nam, phần lớn là nhà đầu tư cá nhân (F0). Họ thường:
-
-- Ra quyết định dựa trên tin đồn, hội nhóm Zalo, cảm tính
-- Không có công cụ phân tích bài bản như các quỹ đầu tư lớn
-- Không biết đọc biểu đồ kỹ thuật (RSI, MACD...)
-
-### Giải pháp
-
-StockSense đưa **công cụ phân tích dữ liệu + Machine Learning** vào tay nhà đầu tư cá nhân — miễn phí, không cần biết code, chỉ cần vào web là dùng được.
-
-### Điểm khác biệt so với các tool thông thường
-
-| Tool thông thường | StockSense |
-|-------------------|------------|
-| Chỉ hiển thị biểu đồ | Hiển thị + dự đoán xu hướng |
-| Dự đoán như "hộp đen" | **Giải thích từng dự đoán** (Explainable AI) |
-| Data nước ngoài | Data thị trường Việt Nam thật |
-| Mất phí | Miễn phí, mã nguồn mở |
+Given a stock ticker (e.g. `VCB`, `FPT`, `VNM`), the system:
+1. Renders an interactive historical price chart with technical indicators
+2. Predicts whether the price will trend **up or down** over the next 5 trading days
+3. **Explains each prediction** — which factors contributed most and by how much (Explainable AI)
 
 ---
 
-## 3. Hệ thống hoạt động như thế nào?
+## 2. Why does this project exist?
 
-### Luồng dữ liệu (Data Pipeline)
+### The Problem
+
+Vietnam has approximately **8 million individual brokerage accounts**. Most retail investors:
+- Make decisions based on rumors, social media tips, and emotion
+- Lack access to professional-grade analysis tools used by institutional funds
+- Cannot read or interpret technical indicators (RSI, MACD, etc.)
+
+### The Solution
+
+StockSense brings **data-driven analysis + Machine Learning** to retail investors — free, no coding required, accessible via a web link.
+
+### What Makes It Different
+
+| Typical Tools | StockSense |
+|---------------|------------|
+| Display charts only | Charts + trend prediction |
+| Black-box predictions | **Explains every prediction** (Explainable AI) |
+| Foreign market data | Vietnamese market data |
+| Paid subscriptions | Free and open source |
+
+---
+
+## 3. How does it work?
+
+### Data Pipeline
 
 ```
-Bước 1: Thu thập dữ liệu
-   vnstock API  ──►  Giá đóng cửa, mở cửa, cao/thấp, khối lượng
-   (nguồn: HOSE/HNX)    mỗi ngày từ 2020 đến nay
+Step 1 — Data Collection
+   vnstock API  ──►  Daily OHLCV prices for each ticker
+   (Source: HOSE/HNX)   from 2020 to present
 
-Bước 2: Tính chỉ số kỹ thuật (Feature Engineering)
-   Dữ liệu thô  ──►  RSI, MACD, Bollinger Bands, MA20, MA50, Volume ratio...
-                      (những "tín hiệu" mà nhà đầu tư chuyên nghiệp hay dùng)
+Step 2 — Feature Engineering
+   Raw OHLCV  ──►  RSI, MACD, Bollinger Bands, MA20, MA50,
+                   Volume Ratio, Golden Cross...
+                   (signals that professional traders use)
 
-Bước 3: Huấn luyện Model ML
-   Dữ liệu + Chỉ số  ──►  XGBoost model học pattern từ 5 năm lịch sử
-                            Câu hỏi: "Khi RSI < 30 + volume tăng 2x,
-                                       5 ngày sau giá có tăng không?"
+Step 3 — ML Model Training
+   Features  ──►  XGBoost learns patterns from 5 years of history
+                  Question: "When RSI < 30 AND volume doubles,
+                              does price rise over the next 5 days?"
 
-Bước 4: Giải thích dự đoán (Explainable AI)
-   Kết quả dự đoán  ──►  SHAP values phân tích đóng góp từng yếu tố
-                           "Giá tăng vì: RSI oversold (+40%), Volume tăng (+30%)..."
+Step 4 — Explainability (SHAP)
+   Prediction  ──►  "Price predicted UP because:
+                     RSI oversold (+40%), Volume spike (+30%)..."
 
-Bước 5: Hiển thị trên Dashboard
-   Tất cả  ──►  Streamlit web app — người dùng tương tác, xem kết quả
+Step 5 — Dashboard
+   Everything  ──►  Streamlit web app, interactive, shareable link
 ```
 
-### Ví dụ cụ thể
+### Concrete Example
 
-> Người dùng nhập **VCB**, hệ thống trả về:
-> - Biểu đồ giá 1 năm với đường RSI phía dưới
-> - Dự đoán: "Xu hướng 5 ngày tới: **Tăng** (xác suất 67%)"
-> - Lý do: RSI đang ở 28 (oversold), volume hôm nay gấp 2.1 lần trung bình, giá vừa chạm lower Bollinger Band
-
----
-
-## 4. Giới hạn cần biết
-
-> **Model không dự đoán được tương lai chính xác 100%.**
-
-Thị trường chứng khoán bị ảnh hưởng bởi tin tức, chính sách, tâm lý đám đông — những thứ không có trong data lịch sử.
-
-Mục tiêu thực tế của model là:
-- Tìm **pattern lặp lại** trong dữ liệu quá khứ
-- Đưa ra **xác suất** xu hướng, không phải giá tuyệt đối
-- Là **một công cụ tham khảo** trong quá trình phân tích, không phải oracle
+> User enters **VCB**. The system returns:
+> - 1-year price chart with RSI and MACD overlays
+> - Prediction: "5-day trend: **Upward** (67% confidence)"
+> - Explanation: RSI at 28 (oversold), today's volume is 2.1× the 20-day average, price just touched the lower Bollinger Band
 
 ---
 
-## 5. Dữ liệu
+## 4. Known Limitations
 
-| Thông tin | Chi tiết |
-|-----------|----------|
-| Nguồn | vnstock API (miễn phí, dữ liệu thật từ HOSE/HNX) |
-| Các mã | VCB, FPT, VNM, HPG, VIC (có thể mở rộng) |
-| Khoảng thời gian | 2020 - 2024 (~1,307 ngày giao dịch/mã) |
-| Tổng dữ liệu | ~6,500 rows, 7 cột raw → 26 cột sau feature engineering |
-| Cập nhật | Có thể fetch lại mỗi ngày bằng 1 câu lệnh |
+> **The model does not predict the future with 100% accuracy — and no model ever will.**
+
+Stock prices are influenced by news events, government policy, and crowd psychology — none of which appear in historical price data.
+
+The model's realistic purpose:
+- Identify **recurring statistical patterns** in historical data
+- Output a **probability**, not a precise price target
+- Serve as **one input** in an investment decision, not a crystal ball
+
+*Being able to articulate this in an interview demonstrates mature, production-level ML thinking.*
 
 ---
 
-## 6. Các chỉ số kỹ thuật được sử dụng
+## 5. Dataset
 
-| Chỉ số | Ý nghĩa ngắn gọn |
-|--------|-----------------|
-| **RSI (14)** | Đo momentum: < 30 = oversold (có thể mua), > 70 = overbought (có thể bán) |
-| **MACD** | Đo xu hướng: histogram dương = đà tăng, âm = đà giảm |
-| **Bollinger Bands** | Đo biến động: giá ở lower band = thường bật lại |
-| **MA20 / MA50** | Đường trung bình 20 và 50 ngày: xác định xu hướng trung và ngắn hạn |
-| **Golden Cross** | MA20 cắt MA50 từ dưới lên = tín hiệu mua mạnh |
-| **Volume Ratio** | So sánh volume hôm nay vs trung bình 20 ngày: > 2 là đột biến |
+| Property | Details |
+|----------|---------|
+| Source | vnstock API (free, real-time HOSE/HNX data) |
+| Tickers | VCB, FPT, VNM, HPG, VIC |
+| Date range | 2020–01–01 to 2024–12–31 |
+| Raw size | ~1,307 trading days × 5 tickers = 6,535 rows |
+| After engineering | 1,258 rows × 26 columns (per ticker) |
+| Refresh | Re-fetchable daily with a single command |
+
+---
+
+## 6. Technical Indicators
+
+| Indicator | Financial Meaning |
+|-----------|------------------|
+| **RSI (14)** | Momentum oscillator: < 30 = oversold (buy signal), > 70 = overbought (sell signal) |
+| **MACD** | Trend strength: positive histogram = bullish momentum, negative = bearish |
+| **Bollinger Bands** | Volatility envelope: price near lower band often mean-reverts upward |
+| **MA20 / MA50** | 20-day and 50-day moving averages: short and medium-term trend direction |
+| **Golden Cross** | MA20 crosses above MA50: strong bullish signal |
+| **Volume Ratio** | Today's volume ÷ 20-day average: > 2× indicates unusual activity |
 
 ---
 
 ## 7. Tech Stack
 
-### Ngôn ngữ & Thư viện
+### Libraries
 
-| Tầng | Công nghệ | Mục đích |
-|------|-----------|----------|
-| **Data** | `vnstock`, `pandas`, `numpy` | Thu thập và xử lý dữ liệu |
-| **Features** | `ta` (Technical Analysis) | Tính các chỉ số kỹ thuật |
-| **Model** | `scikit-learn`, `XGBoost` | Train và đánh giá model ML |
-| **Explainability** | `SHAP` | Giải thích từng dự đoán của model |
-| **Visualization** | `plotly`, `matplotlib` | Vẽ biểu đồ tương tác |
-| **Dashboard** | `Streamlit` | Web app không cần biết HTML/CSS |
-| **Deploy** | Streamlit Cloud | Publish lên internet, có link public |
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Data** | `vnstock`, `pandas`, `numpy` | Data collection and manipulation |
+| **Features** | `ta` | Technical indicator computation |
+| **Modeling** | `scikit-learn`, `XGBoost` | Training and evaluating ML models |
+| **Explainability** | `SHAP` | Per-prediction feature attribution |
+| **Visualization** | `plotly`, `matplotlib` | Interactive and static charts |
+| **Dashboard** | `Streamlit` | Web app without HTML/CSS/JS |
+| **Deployment** | Streamlit Cloud | Public URL, free tier |
 
-### Tại sao chọn những công cụ này?
+### Design Decisions
 
-- **XGBoost** thay vì LSTM/Deep Learning: Nhanh hơn, dễ debug hơn, phù hợp với tabular data (bảng số), và SHAP hỗ trợ tốt
-- **Streamlit** thay vì Flask/React: Viết Python thuần là ra web app, không cần học frontend
-- **vnstock** thay vì mua data: Miễn phí, dữ liệu VN thật, cộng đồng lớn
+- **XGBoost over LSTM:** Faster iteration, better SHAP compatibility, strong baseline for tabular data
+- **Streamlit over Flask/React:** Python-only, no frontend knowledge required
+- **vnstock over paid APIs:** Free, Vietnamese market coverage, active community
 
 ---
 
-## 8. Cấu trúc thư mục
+## 8. Project Structure
 
 ```
 stocksense/
 ├── data/
-│   ├── fetcher.py        Thu thập dữ liệu từ vnstock API
-│   ├── features.py       Tính toán 15+ technical indicators
-│   ├── raw/              CSV gốc (VCB.csv, FPT.csv...)
-│   └── processed/        Data đã clean + features, sẵn sàng cho model
+│   ├── fetcher.py        Pull and cache OHLCV data from vnstock API
+│   ├── features.py       Compute 15+ technical indicators + target variable
+│   ├── raw/              Raw CSV files per ticker (VCB.csv, FPT.csv, ...)
+│   └── processed/        Cleaned + featured data ready for modeling
 │
-├── models/               (Tuần 3-4)
-│   ├── train.py          Huấn luyện XGBoost model
-│   ├── evaluate.py       Đánh giá và so sánh models
-│   └── explain.py        Tạo SHAP explanations
+├── models/               (Week 3–4)
+│   ├── train.py          Train XGBoost model with TimeSeriesSplit
+│   ├── evaluate.py       Metrics: accuracy, precision, recall, directional acc.
+│   └── explain.py        SHAP waterfall and beeswarm plots
 │
-├── app/                  (Tuần 5-6)
-│   └── main.py           Streamlit dashboard (3 trang)
+├── app/                  (Week 5–6)
+│   └── main.py           Streamlit dashboard — 3 pages
 │
-├── notebooks/            Jupyter notebooks cho EDA và thử nghiệm
-├── docs/                 Tài liệu cho thành viên team
-├── requirements.txt      Danh sách thư viện cần cài
-└── README.md             Hướng dẫn cài đặt và chạy
+├── notebooks/            EDA scripts and exploratory analysis
+├── docs/                 Project documentation for all team members
+├── requirements.txt      Python dependencies
+└── README.md             Setup guide and project summary
 ```
 
 ---
 
 ## 9. Team
 
-| Vai trò | Background | Đóng góp chính |
-|---------|-----------|----------------|
-| **IT Engineer** | Công nghệ thông tin | Data pipeline, ML model, Streamlit dashboard, Deploy |
-| **Finance Analyst** | Kinh tế | Định nghĩa bài toán, Feature design, Validate model output, Business logic |
+| Role | Background | Key Contributions |
+|------|-----------|------------------|
+| **IT Engineer** | Computer Science | Data pipeline, ML model, Streamlit dashboard, deployment |
+| **Finance Analyst** | Economics | Problem framing, feature design, model validation, business rules |
 
-Đây là dự án **cross-domain** — kết hợp kiến thức tài chính và kỹ thuật phần mềm, phản ánh cách team thực tế tại các công ty fintech hoạt động.
-
----
-
-## 10. Roadmap
-
-| Tuần | Mục tiêu | Người thực hiện |
-|------|----------|----------------|
-| 1-2 | Thu thập data, tính indicators, EDA | IT (code) + Kinh tế (feature design) |
-| 3-4 | Train XGBoost model, thêm SHAP | IT (code) + Kinh tế (validate output) |
-| 5-6 | Xây Streamlit dashboard | IT (code) + Kinh tế (feedback UX) |
-| 7-8 | Deploy, polish README, demo | Cả 2 |
+This is a deliberate **cross-domain collaboration** — mirroring how real fintech teams operate.
 
 ---
 
-*Tài liệu này được cập nhật theo tiến độ project.*
-*Lần cập nhật gần nhất: Tuần 1 — Data pipeline hoàn thành.*
+## 10. Development Roadmap
+
+| Week | Milestone | Owner |
+|------|-----------|-------|
+| 1–2 | Data collection, feature engineering, EDA | IT (code) + Finance (feature design) |
+| 3–4 | XGBoost model, SHAP explainability | IT (code) + Finance (validate outputs) |
+| 5–6 | Streamlit dashboard | IT (code) + Finance (UX feedback) |
+| 7–8 | Deployment, README polish, demo prep | Both |
+
+---
+
+*Last updated: Week 1 — Data pipeline and EDA complete.*
